@@ -1,0 +1,32 @@
+// Supabase(PostgreSQL)と接続するためのPrismaスキーマ
+// 既存のpublic.tasks / public.logsテーブルに合わせてマッピングする
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Task {
+  /// Supabaseのpublic.tasksテーブルに対応
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  data      Json
+  createdAt DateTime @map("created_at") @default(now())
+
+  @@map("tasks")
+}
+
+model Log {
+  /// Supabaseのpublic.logsテーブルに対応
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  prompt    String
+  response  Json
+  createdAt DateTime @map("created_at") @default(now())
+
+  @@map("logs")
+}

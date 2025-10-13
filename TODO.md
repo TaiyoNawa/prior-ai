@@ -1,0 +1,2 @@
+- OpenAI のクレジット追加して試してみる。
+- 別の LLM モデルを試す。(e.g., Gemini, GPT-4o-mini)
