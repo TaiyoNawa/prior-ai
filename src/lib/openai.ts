@@ -2,8 +2,8 @@ import OpenAI from "openai";
 
 import { AnalyzeTasksResponse, StructuredTask } from "./types";
 
-// const MODEL_NAME = "gpt-4o-mini"; // GPT-4-miniは無料枠では使用不可
-const MODEL_NAME = "gpt-3.5-turbo"; // gpt-3.5-turboに相当する軽量モデルを指定
+const MODEL_NAME = "gpt-4o-mini"; // GPT-4o-mini
+// const MODEL_NAME = "gpt-3.5-turbo"; // gpt-3.5-turbo
 
 const structuredTaskSchema = {
   validate(json: unknown): StructuredTask[] {
@@ -42,6 +42,25 @@ const structuredTaskSchema = {
     });
   },
 };
+
+export class AIResponseParseError extends Error {
+  constructor(message: string, public readonly rawContent: string) {
+    super(message);
+    this.name = "AIResponseParseError";
+  }
+}
+
+function sanitizeJsonContent(raw: string): string {
+  // Markdownのコードフェンスが含まれている場合は中身だけを抽出する
+  const fencedMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fencedMatch) return fencedMatch[1].trim();
+
+  // 先頭や末尾に説明文が付くケースは最初のJSON配列/オブジェクトからを抜き出す
+  const match = raw.match(/[\[{][\s\S]*[\]}]/);
+  if (match) return match[0].trim();
+
+  return raw.trim();
+}
 
 function getOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -84,11 +103,15 @@ export async function analyzeTasksWithAI(
   let parsed: unknown;
 
   try {
-    parsed = JSON.parse(rawContent);
+    const sanitized = sanitizeJsonContent(rawContent);
+    parsed = JSON.parse(sanitized);
   } catch (error) {
-    // TODO: JSONパース失敗時の再試行戦略を検討する（プロンプト調整など）
-    throw new Error(
-      `AIレスポンスのJSON解析に失敗しました: ${(error as Error).message}`
+    // TODO: JSONパース失敗時は再試行する（例: sanitize後に再プロンプト送信）
+    // もしくはcompletion.response_format = { type: "json_object" }を利用する
+
+    throw new AIResponseParseError(
+      `AIレスポンスのJSON解析に失敗しました: ${(error as Error).message}`,
+      rawContent
     );
   }
 

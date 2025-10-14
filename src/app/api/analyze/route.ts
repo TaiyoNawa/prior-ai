@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { analyzeTasksWithAI } from "@/lib/openai";
+import { AIResponseParseError, analyzeTasksWithAI } from "@/lib/openai";
 import { prisma } from "@/lib/prisma";
 import { getSupabaseAuthContext } from "@/lib/supabase/server";
 
@@ -53,6 +53,18 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   } catch (error) {
     console.error("analyze route error", error);
+
+    if (error instanceof AIResponseParseError) {
+      // パース失敗時でもAIの生レスポンスを確認できるよう返却
+      return NextResponse.json(
+        {
+          error: error.message,
+          aiRawResponse: error.rawContent,
+        },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json(
       { error: "AI解析中に問題が発生しました" },
       { status: 500 }

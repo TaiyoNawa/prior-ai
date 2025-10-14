@@ -1,2 +1,5 @@
-- OpenAI のクレジット追加して試してみる。
-- 別の LLM モデルを試す。(e.g., Gemini, GPT-4o-mini)
+- 新仕様書の実装。
+- 別の LLM モデルを使えるようにしたい。(e.g., Gemini2.5Flash-Lite<GPT-4o-mini<gpt-3.5-turbo)>)
+- Youtube 動画作成(動画編集)と自動化(n8n)。
+- Gemini 2.5 Flash-Lite 導入手順(Google AI Studio)。
+- smoothie で Auth 認証 UI 直す。
