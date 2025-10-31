@@ -20,23 +20,108 @@ export default async function TasksPage() {
     redirect("/login");
   }
 
-  // Prisma生成済みの型がまだ利用できない状況でも扱えるよう暫定の型を定義
-  type TaskRecord = {
+  const [logs, taskRecords] = await Promise.all([
+    prisma.log.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.task.findMany({
+      where: { userId: user.id },
+      include: {
+        subtasks: {
+          orderBy: { order: "asc" },
+        },
+      },
+      orderBy: [{ createdAt: "desc" }, { order: "asc" }],
+    }),
+  ]);
+
+  type TaskEntity = (typeof taskRecords)[number];
+
+  const tasksByHash = new Map<string, TaskEntity[]>();
+  for (const task of taskRecords) {
+    const key = task.promptHash ?? `legacy-${task.id}`;
+    const list = tasksByHash.get(key);
+    if (list) {
+      list.push(task);
+    } else {
+      tasksByHash.set(key, [task]);
+    }
+  }
+
+  for (const [, list] of tasksByHash) {
+    list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  const history: Array<{
     id: string;
-    data: unknown;
     createdAt: Date;
-  };
+    tasks: StructuredTask[];
+  }> = [];
 
-  const taskRecords = (await prisma.task.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "desc" },
-  })) as TaskRecord[];
+  function mapStructuredTask(task: TaskEntity): StructuredTask {
+    return {
+      title: task.title,
+      priority: task.priority,
+      order: task.order,
+      category: task.category ?? "未分類",
+      shortReason: task.shortReason ?? undefined,
+      longExplanation: task.longExplanation ?? undefined,
+      estimatedMinutes: task.estMinutes ?? null,
+      dueDate: task.dueDate ? task.dueDate.toISOString() : null,
+      subtasks: task.subtasks
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((subtask) => ({
+          title: subtask.title,
+          priority: subtask.priority,
+          order: subtask.order,
+          completed: subtask.completed,
+          shortReason: subtask.description ?? undefined,
+          estimatedMinutes: undefined,
+        })),
+    };
+  }
 
-  const history = taskRecords.map((record: TaskRecord) => ({
-    id: record.id,
-    createdAt: record.createdAt,
-    tasks: (record.data as StructuredTask[]) ?? [],
-  }));
+  for (const log of logs) {
+    const key = log.promptHash ?? `legacy-${log.id}`;
+    const candidates = tasksByHash.get(key);
+    if (!candidates || candidates.length === 0) {
+      continue;
+    }
+
+    const matched: TaskEntity[] = [];
+    while (candidates.length > 0 && candidates[0].createdAt >= log.createdAt) {
+      matched.push(candidates.shift()!);
+    }
+
+    if (matched.length === 0) {
+      continue;
+    }
+
+    matched.sort((a, b) => a.order - b.order);
+    history.push({
+      id: log.id,
+      createdAt: log.createdAt,
+      tasks: matched.map(mapStructuredTask),
+    });
+  }
+
+  for (const [key, remaining] of tasksByHash) {
+    if (!remaining || remaining.length === 0) {
+      continue;
+    }
+
+    for (const orphan of remaining) {
+      history.push({
+        id: `${key}-${orphan.id}`,
+        createdAt: orphan.createdAt,
+        tasks: [mapStructuredTask(orphan)],
+      });
+    }
+  }
+
+  history.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
   return (
     <div className="flex flex-col gap-8">

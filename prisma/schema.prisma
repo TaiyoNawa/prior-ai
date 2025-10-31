@@ -1,5 +1,5 @@
-// Supabase(PostgreSQL)と接続するためのPrismaスキーマ
-// 既存のpublic.tasks / public.logsテーブルに合わせてマッピングする
+/// Supabase(PostgreSQL)と接続するためのPrismaスキーマ
+/// 旧スキーマとの差分: tasks/logsテーブルを正規化し、usage_counterを新設
 
 generator client {
   provider = "prisma-client-js"
@@ -10,23 +10,86 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Task {
-  /// Supabaseのpublic.tasksテーブルに対応
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @map("user_id") @db.Uuid
-  data      Json
-  createdAt DateTime @map("created_at") @default(now())
+model User {
+  /// Supabaseのauth.usersテーブルと同じUUIDを保持するアプリ用ユーザー
+  /// TODO: Supabaseからの同期タイミングでemailを更新する仕組みを整備する
+  id        String         @id @db.Uuid
+  email     String         @unique
+  createdAt DateTime       @default(now())
 
-  @@map("tasks")
+  tasks     Task[]
+  logs      Log[]
+  usage     UsageCounter?
+}
+
+model Task {
+  /// AIの結果を正規化して保存するタスクテーブル
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  dueDate         DateTime?
+  priority        Int      @default(3)
+  order           Int      @default(0)
+  estMinutes      Int?
+  actualMin       Int?
+  category        String?
+  subtasks        Subtask[]
+  shortReason     String?
+  longExplanation String?
+  completed       Boolean  @default(false)
+  promptHash      String?
+  modelUsed       String?  /// TODO: 有料モデル利用時の後続分析用に保持
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, createdAt], map: "idx_task_user_created")
+  @@index([promptHash], map: "idx_task_prompt_hash")
+  @@index([userId, order], map: "idx_task_user_order")
+}
+
+model Subtask {
+  /// メインタスク配下のサブタスクを管理する
+  id          String   @id @default(uuid()) @db.Uuid
+  taskId      String   @db.Uuid
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  priority    Int      @default(0)
+  order       Int      @default(0)
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([taskId, order], map: "idx_subtask_task_order")
 }
 
 model Log {
-  /// Supabaseのpublic.logsテーブルに対応
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String?  @map("user_id") @db.Uuid
-  prompt    String
-  response  Json
-  createdAt DateTime @map("created_at") @default(now())
+  /// AI呼び出しの履歴を保存。キャッシュ判定やコスト分析で利用
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promptHash   String
+  prompt       Json?
+  response     Json?
+  rawResponse  String   @db.Text
+  costEstimate Float?
+  modelUsed    String?
+  createdAt    DateTime @default(now())
 
-  @@map("logs")
+  @@index([userId, createdAt], map: "idx_log_user_created")
+  @@index([promptHash], map: "idx_log_prompt_hash")
+}
+
+model UsageCounter {
+  /// 月間利用回数とレート制限の緩和状況を管理
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  month     String
+  aiCalls   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@index([month], map: "idx_usage_month")
 }

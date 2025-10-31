@@ -7,15 +7,18 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
+    "db:generate": "dotenv -e .env.local -- prisma generate",
+    "db:seed": "dotenv -e .env.local -- prisma db seed",
     "db:migrate:dev": "dotenv -e .env.local -- prisma migrate dev",
+    "db:migrate:deploy": "dotenv -e .env.local -- prisma migrate deploy",
     "db:reset:dev": "dotenv -e .env.local -- prisma migrate reset",
     "db:push": "dotenv -e .env.local -- prisma db push",
-    "db:studio": "dotenv -e .env.local -- prisma studio",
-    "db:migrate:deploy": "dotenv -e .env.local -- prisma migrate deploy",
-    "db:seed": "dotenv -e .env.local -- prisma db seed",
-    "prisma:generate": "dotenv -e .env.local -- prisma generate"
+    "db:studio": "dotenv -e .env.local -- prisma studio"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@prisma/client": "^5.22.0",
     "@radix-ui/react-slot": "^1.2.3",
     "@supabase/ssr": "^0.7.0",
