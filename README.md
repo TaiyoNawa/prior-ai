@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# prior-ai
+
+AI assisted task planner built with Next.js App Router. Users draft tasks, ask the AI to enrich or regroup them, and review structured results in a sortable task board.
+
+## Features
+
+- AI analysis pipeline that expands tasks into subtasks, estimates effort, and suggests priorities
+- Unified drag and drop across task lists, subtasks, and draft inputs without drag handles
+- Collapsible AI options per draft task so the form stays compact
+- History view that groups prior AI runs by prompt and exposes the generated task breakdowns
+- Supabase auth integration with Prisma-backed persistence
+
+## Prerequisites
+
+- Node.js 18+
+- Yarn (project scripts assume yarn)
+- Supabase project and OAuth credentials
+- OpenAI compatible API key for analysis (In the future, support for other LLMs like Gemini2.5Flash-Lite will be added)
 
 ## Getting Started
 
-First, run the development server:
+1. Install dependencies
+   ```bash
+   yarn install
+   ```
+2. Copy the sample environment file and fill in required secrets
+   ```bash
+   cp .env.example .env.local
+   ```
+3. Run database migrations and generate the Prisma client
+   ```bash
+   yarn prisma migrate dev
+   ```
+4. Launch the development server
+   ```bash
+   yarn dev
+   ```
+5. Open http://localhost:3000 to access the app.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Key Environment Variables
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENAI_API_KEY` (or compatible provider key)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Available Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `yarn dev` – start Next.js in development
+- `yarn build` – produce a production build
+- `yarn start` – serve the production build
+- `yarn lint` – run eslint with the project config
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 14 (App Router, TypeScript)
+- Prisma + PostgreSQL
+- Supabase Auth
+- @dnd-kit for drag and drop interactions
+- shadcn/ui components with Tailwind CSS
