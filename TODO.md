@@ -16,3 +16,4 @@
 - Youtube 動画作成(動画編集)と自動化(n8n)。
 - Gemini 2.5 Flash-Lite 導入手順(Google AI Studio)。
 - smoothie で Auth 認証 UI 直す。
+- Copilot のレビューを修正
